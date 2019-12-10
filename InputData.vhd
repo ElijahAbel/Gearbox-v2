@@ -208,10 +208,10 @@ Output <= Mem(index);
 
 Next_packet : process(CLK,RST,VC)
 begin
-if RST='1' then
-index <= 0;
-else if rising_edge(CLK) then
-    if (VC=Mem(index)(31 DOWNTO 16)) then
+if(RST='1') then
+    index <= 0;
+elsif(rising_edge(CLK)) then
+    if (VC(15 downto 0)=Mem(index)(31 DOWNTO 16)) then
         index <= index + 1;
     end if;
 end if;
