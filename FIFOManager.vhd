@@ -118,15 +118,15 @@ signal lvl1Counter, lvl2Counter : STD_LOGIC_VECTOR(4 DOWNTO 0) := "00000"; --To 
 signal Tens, Hundreds, Thousands, Aggregate : integer := 0;
 signal VC_In, VC_In_Adj, queue_sel_lvl1_adj, queue_sel_lvl2_adj : STD_LOGIC_VECTOR(15 DOWNTO 0);
 signal queue_sel_lvl0, queue_sel_lvl1, queue_sel_lvl2 : STD_LOGIC_VECTOR(3 DOWNTO 0);
---signal state_sel_lvl0, state_sel_lvl1 : STD_LOGIC_VECTOR(15 DOWNTO 0);
 signal empty : std_logic;
 signal counter_to_ten : std_logic_vector(3 DOWNTO 0) := (others => '0');
 signal counter_to_hundred : std_logic_vector(6 DOWNTO 0) := (others => '0');
 signal counter_to_thousand : std_logic_vector(9 DOWNTO 0) := (others => '0');
 signal tens_counter, hundreds_counter : std_logic_vector(3 DOWNTO 0) := (others => '0');
-signal VC_int : integer;
-
-signal state_sel_lvl0, state_sel_lvl1 : std_logic_vector(0 DOWNTO 0) := "0"; --if '0' then a, if '1' then b
+signal twenties_counter, two_hundreds_counter : integer := 1;
+signal every_twenty, every_two_hundred : integer := 0;
+signal state_sel_0_adj, state_sel_1_adj : integer;
+signal state_sel_lvl0, state_sel_lvl1 : std_logic := '0'; --if '0' then a, if '1' then b
 --signal curr_queue_empty : std_logic;
 
 --signal CurrFIFOLvl0a_Empty : std_logic := '0'; 
@@ -141,8 +141,13 @@ queue_sel_lvl1 <= tens_counter;
 --queue_sel_lvl2_adj <= VC - Thousands;
 queue_sel_lvl2 <= hundreds_counter;
 
-state_sel_lvl0 <= std_logic_vector(to_unsigned(to_integer(unsigned(queue_sel_lvl1)) mod 2, state_sel_lvl0'length));
-state_sel_lvl1 <= std_logic_vector(to_unsigned(to_integer(unsigned(queue_sel_lvl2)) mod 2, state_sel_lvl1'length));
+state_sel_0_adj <= to_integer(unsigned(VC)) - every_twenty;
+state_sel_1_adj <= to_integer(unsigned(VC)) - every_two_hundred;
+
+state_sel_lvl0 <= '0' when state_sel_0_adj < 10 else '1';
+state_sel_lvl1 <= '0' when state_sel_1_adj < 100 else '1';
+
+
 
 VCC_Round <= PacketIn(INPUT_WIDTH - 1 downto DATA_WIDTH);
 Packet_Addr <= PacketIn(DATA_WIDTH - 1 downto 0);
@@ -264,7 +269,6 @@ empty <= Lvl0a_Empty0 when RST='1' or (State = LVL_0A and queue_sel_lvl0="0000")
 			Lvl0b_Empty7 when State = LVL_0B and queue_sel_lvl0="0111" else
 			Lvl0b_Empty8 when State = LVL_0B and queue_sel_lvl0="1000" else
 			Lvl0b_Empty9 when State = LVL_0B and queue_sel_lvl0="1001" else
-			Lvl1b_Empty0 when State = LVL_0B and queue_sel_lvl1="0000" else
 			Lvl1a_Empty0 when State = LVL_1A and queue_sel_lvl1="0000" else
 			Lvl1a_Empty1 when State = LVL_1A and queue_sel_lvl1="0001" else
 			Lvl1a_Empty2 when State = LVL_1A and queue_sel_lvl1="0010" else
@@ -275,6 +279,7 @@ empty <= Lvl0a_Empty0 when RST='1' or (State = LVL_0A and queue_sel_lvl0="0000")
 			Lvl1a_Empty7 when State = LVL_1A and queue_sel_lvl1="0111" else
 			Lvl1a_Empty8 when State = LVL_1A and queue_sel_lvl1="1000" else
 			Lvl1a_Empty9 when State = LVL_1A and queue_sel_lvl1="1001" else
+			Lvl1b_Empty0 when State = LVL_1B and queue_sel_lvl1="0000" else
 			Lvl1b_Empty1 when State = LVL_1B and queue_sel_lvl1="0001" else
 			Lvl1b_Empty2 when State = LVL_1B and queue_sel_lvl1="0010" else
 			Lvl1b_Empty3 when State = LVL_1B and queue_sel_lvl1="0011" else
@@ -284,6 +289,7 @@ empty <= Lvl0a_Empty0 when RST='1' or (State = LVL_0A and queue_sel_lvl0="0000")
 			Lvl1b_Empty7 when State = LVL_1B and queue_sel_lvl1="0111" else
 			Lvl1b_Empty8 when State = LVL_1B and queue_sel_lvl1="1000" else
 			Lvl1b_Empty9 when State = LVL_1B and queue_sel_lvl1="1001" else
+			Lvl2_Empty0 when State = LVL_2 and queue_sel_lvl2="0000" else
 			Lvl2_Empty1 when State = LVL_2 and queue_sel_lvl2="0001" else
 			Lvl2_Empty2 when State = LVL_2 and queue_sel_lvl2="0010" else
 			Lvl2_Empty3 when State = LVL_2 and queue_sel_lvl2="0011" else
@@ -418,12 +424,12 @@ if rising_edge(CLK) then
     else
         case State is
 				when LVL_0A => if empty='1' then 
-										if state_sel_lvl1="0" then State<=LVL_1A;
+										if state_sel_lvl1='0' then State<=LVL_1A;
 										else State<=LVL_1B;
 										end if;
 									end if;
 				when LVL_0B => if empty='1' then 
-										if state_sel_lvl1="0" then State<=LVL_1A;
+										if state_sel_lvl1='0' then State<=LVL_1A;
 										else State<=LVL_1B;
 										end if;
 									end if;
@@ -432,7 +438,7 @@ if rising_edge(CLK) then
 				when LVL_1B => if empty='1' then State <= LVL_2;
 									end if;
 				when LVL_2 => if empty='1' then 
-										if state_sel_lvl0="0" then State<=LVL_0A;
+										if state_sel_lvl0='0' then State<=LVL_0A;
 										else State<=LVL_0B;
 										end if;
 										VC <= std_logic_vector( unsigned(VC) + 1);
@@ -463,6 +469,18 @@ if rising_edge(CLK) then
 											thousands <= thousands + 1000;
 										else
 											counter_to_thousand <= std_logic_vector( unsigned(counter_to_thousand) + 1);
+										end if;
+										if(twenties_counter=20) then 
+											every_twenty <= every_twenty + 20;
+											twenties_counter <= 0;
+										else
+											twenties_counter <=twenties_counter + 1;
+										end if;
+										if(two_hundreds_counter=20) then 
+											every_two_hundred <= every_two_hundred + 200;
+											two_hundreds_counter <= 0;
+										else
+											two_hundreds_counter <= two_hundreds_counter + 1;
 										end if;
 									end if;
         end case;
