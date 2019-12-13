@@ -16,7 +16,7 @@
 -- Revision 0.01 - File Created
 -- Additional Comments:
 -- 
-----------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
 
 
 library IEEE;
@@ -38,15 +38,20 @@ entity InputData is
 		CLK			: in STD_LOGIC;
 		RST			: in STD_LOGIC;
 		VC			: in STD_LOGIC_VECTOR(15 DOWNTO 0);
-		PacketIn	: out STD_LOGIC_VECTOR(48 DOWNTO 0)
+		State       : in GBStateType;
+		PacketIn	: out STD_LOGIC_VECTOR(47 DOWNTO 0);
+		Vld         : out std_logic
 	);
 end InputData;
 
 architecture Behavioral of InputData is
-signal index : integer := 0;
-type internalMem is array(0 to 200) of STD_LOGIC_VECTOR(47 DOWNTO 0);
+type internalMem is array(0 to 153) of STD_LOGIC_VECTOR(47 DOWNTO 0);
 signal Mem : internalMem; 
 signal Output : STD_LOGIC_VECTOR(47 DOWNTO 0);
+signal index : integer := 0;
+signal currentPacket : STD_LOGIC_VECTOR(47 DOWNTO 0);
+signal NextPacketArrival : STD_LOGIC_VECTOR(15 DOWNTO 0);
+signal NextPacketFinish : STD_LOGIC_VECTOR(15 DOWNTO 0);
 
 begin
 Mem <= ("0000000000000100" & "0000000000000000" & "0000000000000010",
@@ -204,15 +209,29 @@ Mem <= ("0000000000000100" & "0000000000000000" & "0000000000000010",
 "0000000000000001" & "0000000011111010" & "0000000111110101",
 "0000000000000000" & "0000000000000000" & "0000000000000000");
 
-Output <= Mem(index);
+PacketIn(47 DOWNTO 0) <= Mem(index)(47 DOWNTO 0); --Output of this module, PacketIn for Gearbox
+NextPacketArrival <= Mem(index)(31 DOWNTO 16);
+NextPacketFinish <= Mem(index)(15 DOWNTO 0);
+
+Vld <= '1' when VC(15 DOWNTO 0)=Mem(index)(31 DOWNTO 16) else
+        '0';
 
 Next_packet : process(CLK,RST,VC)
 begin
 if(RST='1') then
     index <= 0;
-elsif(rising_edge(CLK)) then
+    --Vld <= '0';
+elsif rising_edge(CLK) then
     if (VC(15 downto 0)=Mem(index)(31 DOWNTO 16)) then
-        index <= index + 1;
+        --PacketIn(47 DOWNTO 0) <= Mem(index)(47 DOWNTO 0); --Output of this module, PacketIn for Gearbox
+        --NextPacketArrival <= Mem(index)(31 DOWNTO 16);
+        --NextPacketFinish <= Mem(index)(15 DOWNTO 0);
+        if(State/=INIT) then
+            index <= index + 1;
+        end if;
+       -- Vld <= '1';
+--    else
+  --      Vld <= '0';
     end if;
 end if;
 

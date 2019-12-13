@@ -4,7 +4,7 @@ USE IEEE.NUMERIC_STD.ALL;
 
 entity FIFO is
 	Generic (
-		constant DATA_WIDTH  : positive := 64;--64 bits for mem address of packet
+		constant DATA_WIDTH  : positive := 48;--64 bits for mem address of packet
 		constant FIFO_DEPTH	: positive := 256 --holding 256 packets per queue
 	);
 	Port ( 
