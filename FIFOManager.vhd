@@ -35,8 +35,8 @@ use work.state_pkg.all;
 
 entity FIFOManager is
 	generic(
-		constant DATA_WIDTH : positive := 64;
-		constant INPUT_WIDTH : positive := 68
+		constant DATA_WIDTH : positive := 48;
+		constant INPUT_WIDTH : positive := 48
 	);
 	port ( 
 		CLK       	: in STD_LOGIC;
