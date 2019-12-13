@@ -41,11 +41,11 @@ entity FIFOManager is
 	port ( 
 		CLK       	: in STD_LOGIC;
 		RST       	: in STD_LOGIC;
-		ReadEn      : in STD_LOGIC;
-		WriteEn     : in STD_LOGIC;
-		PacketIn  	: in STD_LOGIC_VECTOR(INPUT_WIDTH - 1 DOWNTO 0);
-		StateOut    : out GBStateType;
-		VC_Out		: out STD_LOGIC_VECTOR(15 DOWNTO 0);
+		--PacketIn  	: in STD_LOGIC_VECTOR(INPUT_WIDTH - 1 DOWNTO 0);
+		--StateOut    : out GBStateType;
+		--ReadEn      : out STD_LOGIC;
+        --WriteEn     : out STD_LOGIC;
+		--VC_Out		: out STD_LOGIC_VECTOR(15 DOWNTO 0);
 		PacketOut 	: out STD_LOGIC_VECTOR(DATA_WIDTH - 1 DOWNTO 0)
 	);
 end FIFOManager;
@@ -62,6 +62,16 @@ component FIFO is
 		DataOut	: out STD_LOGIC_VECTOR (DATA_WIDTH - 1 downto 0);
 		Empty		: out STD_LOGIC
 		--Full		: out STD_LOGIC
+	);
+end component;
+
+component InputData is
+    port ( 
+		CLK			: in STD_LOGIC;
+		RST			: in STD_LOGIC;
+		index       : in integer;
+		NextPacketIn	: out STD_LOGIC_VECTOR(47 DOWNTO 0)
+		--Vld         : out std_logic
 	);
 end component;
 
@@ -106,6 +116,7 @@ signal Lvl2_DataOut0, Lvl2_DataOut1, Lvl2_DataOut2, Lvl2_DataOut3, Lvl2_DataOut4
 signal Lvl2_Empty0, Lvl2_Empty1, Lvl2_Empty2, Lvl2_Empty3, Lvl2_Empty4, Lvl2_Empty5, Lvl2_Empty6, Lvl2_Empty7, Lvl2_Empty8, Lvl2_Empty9 : STD_LOGIC;
 --signal Lvl2_Full0, Lvl2_Full1, Lvl2_Full2, Lvl2_Full3, Lvl2_Full4, Lvl2_Full5, Lvl2_Full6, Lvl2_Full7, Lvl2_Full8, Lvl2_Full9 : STD_LOGIC;
 
+signal WriteEn, ReadEn : std_logic := '0';
 signal VC : STD_LOGIC_VECTOR(15 DOWNTO 0) := (others => '0');
 signal VCC_Round : STD_LOGIC_VECTOR(3 DOWNTO 0); --tells us which queue we should place a packet in
 --signal PacketIn : STD_LOGIC_VECTOR(DATA_WIDTH - 1 DOWNTO 0);
@@ -130,14 +141,16 @@ signal twenties_counter, two_hundreds_counter : integer := 1;
 signal every_twenty, every_two_hundred : integer := 0;
 signal state_sel_0_adj, state_sel_1_adj : integer;
 signal state_sel_lvl0, state_sel_lvl1 : std_logic := '0'; --if '0' then a, if '1' then b
-signal Finish_Time_PacketIn : std_logic_vector(15 downto 0);
+signal Finish_Time_PacketIn, Arrival_Time_PacketIn : std_logic_vector(15 downto 0);
 signal insertion_lvl : std_logic_vector(1 downto 0);
+signal index : integer := 0;
+signal PacketIn : STD_LOGIC_VECTOR(47 DOWNTO 0);
+signal Next_VC : STD_LOGIC_VECTOR(15 DOWNTO 0);
 --signal curr_queue_empty : std_logic;
 
 --signal CurrFIFOLvl0a_Empty : std_logic := '0'; 
 
 begin
-StateOut <= State;
 
 --Aggregate <= Tens + Hundreds + Thousands;
 VC_In_Adj <= Tens + Hundreds + Thousands; --adjustment value based on current VC
@@ -145,6 +158,8 @@ VC_In <= to_integer(unsigned(Finish_Time_PacketIn)) - VC_In_Adj; --signal for de
 VC_In_Lvl1_Adj <= Hundreds + Thousands;
 VC_In_Lvl1 <= to_integer(unsigned(Finish_Time_PacketIn)) - VC_In_Lvl1_Adj;
 VC_In_Lvl2 <= to_integer(unsigned(Finish_Time_PacketIn)) - Thousands;
+
+Next_VC <= std_logic_vector(unsigned(VC) + 1);
 
 queue_sel_lvl0 <= counter_to_ten;
 --queue_sel_lvl1_adj <= VC - Thousands - Hundreds;
@@ -155,11 +170,12 @@ queue_sel_lvl2 <= hundreds_counter;
 state_sel_0_adj <= to_integer(unsigned(VC)) - every_twenty;
 state_sel_1_adj <= to_integer(unsigned(VC)) - every_two_hundred;
 
-state_sel_lvl0 <= '0' when state_sel_0_adj < 10 else '1';
+state_sel_lvl0 <= '0' when state_sel_0_adj < 9 or state_sel_0_adj=19 else '1'; --have to set 1 cycle earlier because it is used in synchronous function
 state_sel_lvl1 <= '0' when state_sel_1_adj < 100 else '1';
 
-VC_Out(15 DOWNTO 0) <= VC(15 DOWNTO 0); --Outputs VC to top level
+--VC_Out(15 DOWNTO 0) <= VC(15 DOWNTO 0); --Outputs VC to top level
 Finish_Time_PacketIn(15 DOWNTO 0) <= PacketIn(15 DOWNTO 0);
+Arrival_Time_PacketIn(15 DOWNTO 0) <= PacketIn(31 DOWNTO 16);
 
 insertion_lvl <= "00" when VC_In < 20 else
                  "01" when VC_In_Lvl1 < 200 else
@@ -172,7 +188,7 @@ insertion_lvl <= "00" when VC_In < 20 else
 
 
 
-
+InData : InputData PORT MAP(CLK => CLK, RST => RST, index => index, NextPacketIn => PacketIn);
 
 
 Lvl_0a_QUEUE_0: FIFO PORT MAP(CLK => CLK, RST => RST, WriteEn => Lvl0a_WriteEn0, PacketIn => PacketIn, ReadEn => Lvl0a_ReadEn0, DataOut => Lvl0a_DataOut0, Empty => Lvl0a_Empty0);
@@ -626,7 +642,33 @@ Lvl2_WriteEn9 <= '0' when RST='1' else
 --    end case;
 --end if;
 --end process;                                
-                                      
+nextInput : process(CLK,RST,WriteEn)
+begin
+if rising_edge(CLK) then
+    if(RST='1') then
+        index <= 0;
+    elsif(WriteEn='1') then
+        index <= index + 1;
+    end if;
+end if;
+end process;  
+
+Write_Read_Controller : process(CLK, RST, State, VC, PacketIn)
+begin
+if rising_edge(CLK) then
+    if(RST='1') then
+        WriteEn <= '0';
+        ReadEn <= '0';
+    elsif (Arrival_Time_PacketIn(15 DOWNTO 0)=VC(15 DOWNTO 0)) or (State=LVL_2 and empty='1' and Arrival_Time_PacketIn(15 DOWNTO 0)=Next_VC(15 DOWNTO 0))then
+        WriteEn<= '1';
+        ReadEn <= '0';
+    else
+        ReadEn <= '1';
+        WriteEn<='0';
+    end if;
+
+end if;
+end process;               
 
 state_machine : process(CLK,RST,State,empty,ReadEn) 
 begin
@@ -645,11 +687,13 @@ if rising_edge(CLK) then
         thousands <= 0;
         tens <= 0;
         hundreds <= 0;
+        VC(15 DOWNTO 0) <= (others => '0');
 		
     elsif State=INIT or ReadEn='1' then
         case State is
                 when INIT => State <= LVL_0A;
-				when LVL_0A => if empty='1' then 
+				when LVL_0A => if empty='1' then
+				                         
 										if state_sel_lvl1='0' then State<=LVL_1A;
 										else State<=LVL_1B;
 										end if;
@@ -704,15 +748,17 @@ if rising_edge(CLK) then
 										else
 											counter_to_thousand <= std_logic_vector( unsigned(counter_to_thousand) + 1);
 										end if;
-										if(twenties_counter=20) then 
+										if(twenties_counter=19) then 
 											every_twenty <= every_twenty + 20;
-											twenties_counter <= 0;
+											twenties_counter <= twenties_counter + 1;
+									   elsif(twenties_counter=20) then
+									       twenties_counter <= 1;
 										else
 											twenties_counter <=twenties_counter + 1;
 										end if;
-										if(two_hundreds_counter=20) then 
+										if(two_hundreds_counter=200) then 
 											every_two_hundred <= every_two_hundred + 200;
-											two_hundreds_counter <= 0;
+											two_hundreds_counter <= 1;
 										else
 											two_hundreds_counter <= two_hundreds_counter + 1;
 										end if;

@@ -59,10 +59,8 @@ component InputData is
     port ( 
 		CLK			: in STD_LOGIC;
 		RST			: in STD_LOGIC;
-		VC			: in STD_LOGIC_VECTOR(15 DOWNTO 0);
-		State       : in GBStateType;
-		PacketIn	: out STD_LOGIC_VECTOR(47 DOWNTO 0);
-		Vld         : out std_logic
+		index       : in integer;
+		NextPacketIn	: out STD_LOGIC_VECTOR(47 DOWNTO 0)
 	);
 end component;
 
@@ -72,17 +70,38 @@ signal ReadEn, WriteEn : STD_LOGIC := '0';
 signal packet_to_sched : STD_LOGIC_VECTOR(47 DOWNTO 0);
 signal flowID, VC_arrival, VC_depart : STD_LOGIC_VECTOR(15 downto 0);
 signal State : GBStateType;
+signal index : integer :=0;
+signal VCplusOne : STD_LOGIC_VECTOR(15 DOWNTO 0);
 begin
 
 scheduler : FIFOManager PORT MAP ( CLK => CLK, RST => RST, ReadEn => ReadEn, WriteEn => WriteEn, PacketIn => packet_to_sched, StateOut => State, VC_Out => VC, PacketOut => PacketOut);
-inputSrc  : InputData PORT MAP ( CLK => CLK, RST => RST, VC => VC, State => State, PacketIn => packet_to_sched, Vld => Vld);
+inputSrc  : InputData PORT MAP ( CLK => CLK, RST => RST, index => index, NextPacketIn => packet_to_sched);
 
 flowID <= packet_to_sched(47 DOWNTO 32);
 VC_arrival <= packet_to_sched(31 DOWNTO 16);
 VC_depart <= packet_to_sched(15 DOWNTO 0);
 
-ReadEn <= '0' when Vld='1' or RST='1' else '1'; --Because we need our packets inserted at a specific round, we won't read at the start of a round while there are packets to write
-WriteEn <= '1' when Vld='1' else '0';
+ReadEn <= '0' when (Vld='1' and (State=INIT or State=LVL_0A or State=LVL_0B)) or RST='1' else '1'; --Because we need our packets inserted at a specific round, we won't read at the start of a round while there are packets to write
+WriteEn <= '0' when RST='1' else 
+           '1' when (Vld='1' and (State=INIT or State=LVL_0A or State=LVL_0B)) 
+           else '0';
+
+VCplusOne <= std_logic_vector(unsigned(VC) + 1);
+
+Vld <= '1' when VC(15 DOWNTO 0)=VC_arrival or VCplusOne(15 DOWNTO 0)=VC_arrival else '0';
+
+
+incr_Index : process(CLK,RST,index,ReadEn,WriteEn)
+begin
+if rising_edge(CLK) then
+    if RST='1' then
+        index <= 0;
+    elsif Vld <= '1' and WriteEn <= '1' then
+        index <= index + 1;
+    end if;
+end if;
+
+end process;
 
 --SetReadWrite : process(CLK, RST, Vld)
 --begin
@@ -102,6 +121,6 @@ WriteEn <= '1' when Vld='1' else '0';
 
 --end if;
 
-end process;
+--end process;
 
 end Behavioral;
