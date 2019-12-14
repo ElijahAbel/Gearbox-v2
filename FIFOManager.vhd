@@ -67,10 +67,11 @@ end component;
 
 component InputData is
     port ( 
-		CLK			: in STD_LOGIC;
-		RST			: in STD_LOGIC;
-		index       : in integer;
-		NextPacketIn	: out STD_LOGIC_VECTOR(47 DOWNTO 0)
+		CLK			        : in STD_LOGIC;
+		RST			        : in STD_LOGIC;
+		index               : in integer;
+		PacketIn	        : out STD_LOGIC_VECTOR(47 DOWNTO 0);
+		NextPacketArrival   : out STD_LOGIC_VECTOR(15 DOWNTO 0)
 		--Vld         : out std_logic
 	);
 end component;
@@ -114,7 +115,7 @@ signal Lvl2_WriteEn0, Lvl2_WriteEn1, Lvl2_WriteEn2, Lvl2_WriteEn3, Lvl2_WriteEn4
 signal Lvl2_ReadEn0, Lvl2_ReadEn1, Lvl2_ReadEn2, Lvl2_ReadEn3, Lvl2_ReadEn4, Lvl2_ReadEn5, Lvl2_ReadEn6, Lvl2_ReadEn7, Lvl2_ReadEn8, Lvl2_ReadEn9 : std_logic := '0';
 signal Lvl2_DataOut0, Lvl2_DataOut1, Lvl2_DataOut2, Lvl2_DataOut3, Lvl2_DataOut4, Lvl2_DataOut5, Lvl2_DataOut6, Lvl2_DataOut7, Lvl2_DataOut8, Lvl2_DataOut9 : STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
 signal Lvl2_Empty0, Lvl2_Empty1, Lvl2_Empty2, Lvl2_Empty3, Lvl2_Empty4, Lvl2_Empty5, Lvl2_Empty6, Lvl2_Empty7, Lvl2_Empty8, Lvl2_Empty9 : STD_LOGIC;
---signal Lvl2_Full0, Lvl2_Full1, Lvl2_Full2, Lvl2_Full3, Lvl2_Full4, Lvl2_Full5, Lvl2_Full6, Lvl2_Full7, Lvl2_Full8, Lvl2_Full9 : STD_LOGIC;
+--signal Lvl2_Full0, Lvl2_Full1, Lvl2_Full2, Lvl2_Full3, Lvl2_Full4, Lvl2_Full5, Lvl2_Full6, Lvl2_Full7, Lvl2_Full8, Lvl2_Full9 : STD_LOGIC
 
 signal WriteEn, ReadEn : std_logic := '0';
 signal VC : STD_LOGIC_VECTOR(15 DOWNTO 0) := (others => '0');
@@ -146,6 +147,7 @@ signal insertion_lvl : std_logic_vector(1 downto 0);
 signal index : integer := 0;
 signal PacketIn : STD_LOGIC_VECTOR(47 DOWNTO 0);
 signal Next_VC : STD_LOGIC_VECTOR(15 DOWNTO 0);
+signal NextPacketArrival : STD_LOGIC_VECTOR(15 DOWNTO 0);
 --signal curr_queue_empty : std_logic;
 
 --signal CurrFIFOLvl0a_Empty : std_logic := '0'; 
@@ -188,7 +190,7 @@ insertion_lvl <= "00" when VC_In < 20 else
 
 
 
-InData : InputData PORT MAP(CLK => CLK, RST => RST, index => index, NextPacketIn => PacketIn);
+InData : InputData PORT MAP(CLK => CLK, RST => RST, index => index, PacketIn => PacketIn, NextPacketArrival => NextPacketArrival);
 
 
 Lvl_0a_QUEUE_0: FIFO PORT MAP(CLK => CLK, RST => RST, WriteEn => Lvl0a_WriteEn0, PacketIn => PacketIn, ReadEn => Lvl0a_ReadEn0, DataOut => Lvl0a_DataOut0, Empty => Lvl0a_Empty0);
@@ -504,119 +506,119 @@ Lvl0b_WriteEn9 <= '0' when RST='1' else
 						'0';
 
 Lvl1a_WriteEn0 <= '0' when RST='1' else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=0 and VC_In_Lvl1<10 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=100 and VC_In_Lvl1<110 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=0 and VC_In_Lvl1<10 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=100 and VC_In_Lvl1<110 else
 						'0';
 Lvl1a_WriteEn1 <= '0' when RST='1' else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=10 and VC_In_Lvl1<20 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=110 and VC_In_Lvl1<120 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=10 and VC_In_Lvl1<20 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=110 and VC_In_Lvl1<120 else
 						'0';
 Lvl1a_WriteEn2 <= '0' when RST='1' else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=20 and VC_In_Lvl1<30 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=120 and VC_In_Lvl1<130 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=20 and VC_In_Lvl1<30 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=120 and VC_In_Lvl1<130 else
 						'0';
 Lvl1a_WriteEn3 <= '0' when RST='1' else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=30 and VC_In_Lvl1<40 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=130 and VC_In_Lvl1<140 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=30 and VC_In_Lvl1<40 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=130 and VC_In_Lvl1<140 else
 						'0';                                               
 Lvl1a_WriteEn4 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=40 and VC_In_Lvl1<50 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=140 and VC_In_Lvl1<150 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=40 and VC_In_Lvl1<50 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=140 and VC_In_Lvl1<150 else
 						'0';                                               
 Lvl1a_WriteEn5 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=50 and VC_In_Lvl1<60 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=150 and VC_In_Lvl1<160 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=50 and VC_In_Lvl1<60 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=150 and VC_In_Lvl1<160 else
 						'0';                                               
 Lvl1a_WriteEn6 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=60 and VC_In_Lvl1<70 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=160 and VC_In_Lvl1<170 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=60 and VC_In_Lvl1<70 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1'and VC_In_Lvl1>=160 and VC_In_Lvl1<170 else
 						'0';                                               
 Lvl1a_WriteEn7 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=70 and VC_In_Lvl1<80 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=170 and VC_In_Lvl1<180 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=70 and VC_In_Lvl1<80 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=170 and VC_In_Lvl1<180 else
 						'0';                                               
 Lvl1a_WriteEn8 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=80 and VC_In_Lvl1<90 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=180 and VC_In_Lvl1<190 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=80 and VC_In_Lvl1<90 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=180 and VC_In_Lvl1<190 else
 						'0';                                               
 Lvl1a_WriteEn9 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=90 and VC_In_Lvl1<100 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=190 and VC_In_Lvl1<200 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=90 and VC_In_Lvl1<100 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=190 and VC_In_Lvl1<200 else
 						'0';
 
 
 Lvl1b_WriteEn0 <= '0' when RST='1' else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=0 and VC_In_Lvl1<10 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=100 and VC_In_Lvl1<110 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=0 and VC_In_Lvl1<10 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=100 and VC_In_Lvl1<110 else
 						'0';
 Lvl1b_WriteEn1 <= '0' when RST='1' else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=10 and VC_In_Lvl1<20 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=110 and VC_In_Lvl1<120 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=10 and VC_In_Lvl1<20 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=110 and VC_In_Lvl1<120 else
 						'0';
 Lvl1b_WriteEn2 <= '0' when RST='1' else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=20 and VC_In_Lvl1<30 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=120 and VC_In_Lvl1<130 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=20 and VC_In_Lvl1<30 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=120 and VC_In_Lvl1<130 else
 						'0';
 Lvl1b_WriteEn3 <= '0' when RST='1' else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=30 and VC_In_Lvl1<40 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=130 and VC_In_Lvl1<140 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=30 and VC_In_Lvl1<40 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=130 and VC_In_Lvl1<140 else
 						'0';                                               
 Lvl1b_WriteEn4 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=40 and VC_In_Lvl1<50 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=140 and VC_In_Lvl1<150 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=40 and VC_In_Lvl1<50 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=140 and VC_In_Lvl1<150 else
 						'0';                                               
 Lvl1b_WriteEn5 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=50 and VC_In_Lvl1<60 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=150 and VC_In_Lvl1<160 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=50 and VC_In_Lvl1<60 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=150 and VC_In_Lvl1<160 else
 						'0';                                               
 Lvl1b_WriteEn6 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=60 and VC_In_Lvl1<70 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=160 and VC_In_Lvl1<170 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=60 and VC_In_Lvl1<70 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=160 and VC_In_Lvl1<170 else
 						'0';                                               
 Lvl1b_WriteEn7 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=70 and VC_In_Lvl1<80 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=170 and VC_In_Lvl1<180 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=70 and VC_In_Lvl1<80 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=170 and VC_In_Lvl1<180 else
 						'0';                                               
 Lvl1b_WriteEn8 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=80 and VC_In_Lvl1<90 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=180 and VC_In_Lvl1<190 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=80 and VC_In_Lvl1<90 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=180 and VC_In_Lvl1<190 else
 						'0';                                               
 Lvl1b_WriteEn9 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0B and VC_In_Lvl1>=90 and VC_In_Lvl1<100 else
-						'1' when insertion_lvl="01" and WriteEn='1' and State = LVL_0A and VC_In_Lvl1>=190 and VC_In_Lvl1<200 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='1' and VC_In_Lvl1>=90 and VC_In_Lvl1<100 else
+						'1' when insertion_lvl="01" and WriteEn='1' and state_sel_lvl1='0' and VC_In_Lvl1>=190 and VC_In_Lvl1<200 else
 						'0';
 
 --===========Set Write Signals===============--
 
 Lvl2_WriteEn0 <= '0' when RST='1' else
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=0 and VC_In_Lvl2<100 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=0 and VC_In_Lvl2<100 else
 						'0';
 Lvl2_WriteEn1 <= '0' when RST='1' else
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=100 and VC_In_Lvl2<200 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=100 and VC_In_Lvl2<200 else
 						'0';
 Lvl2_WriteEn2 <= '0' when RST='1' else
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=200 and VC_In_Lvl2<300 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=200 and VC_In_Lvl2<300 else
 						'0';
 Lvl2_WriteEn3 <= '0' when RST='1' else
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=300 and VC_In_Lvl2<400 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=300 and VC_In_Lvl2<400 else
 						'0';                                               
 Lvl2_WriteEn4 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=400 and VC_In_Lvl2<500 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=400 and VC_In_Lvl2<500 else
 						'0';                                               
 Lvl2_WriteEn5 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=500 and VC_In_Lvl2<600 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=500 and VC_In_Lvl2<600 else
 						'0';                                               
 Lvl2_WriteEn6 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=600 and VC_In_Lvl2<700 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=600 and VC_In_Lvl2<700 else
 						'0';                                               
 Lvl2_WriteEn7 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=700 and VC_In_Lvl2<800 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=700 and VC_In_Lvl2<800 else
 						'0';                                               
 Lvl2_WriteEn8 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=800 and VC_In_Lvl2<900 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=800 and VC_In_Lvl2<900 else
 						'0';                                               
 Lvl2_WriteEn9 <= '0' when RST='1' else                                    
-						'1' when insertion_lvl="10" and WriteEn='1' and State = LVL_0A and VC_In_Lvl2>=900 and VC_In_Lvl2<1000 else
+						'1' when insertion_lvl="10" and WriteEn='1' and VC_In_Lvl2>=900 and VC_In_Lvl2<1000 else
 						'0';
 
 --===========END Set Write Signals===============--
@@ -647,7 +649,7 @@ begin
 if rising_edge(CLK) then
     if(RST='1') then
         index <= 0;
-    elsif(WriteEn='1') then
+    elsif(WriteEn='1' and index<153) then
         index <= index + 1;
     end if;
 end if;
@@ -659,7 +661,7 @@ if rising_edge(CLK) then
     if(RST='1') then
         WriteEn <= '0';
         ReadEn <= '0';
-    elsif (Arrival_Time_PacketIn(15 DOWNTO 0)=VC(15 DOWNTO 0)) or (State=LVL_2 and empty='1' and Arrival_Time_PacketIn(15 DOWNTO 0)=Next_VC(15 DOWNTO 0))then
+    elsif (Arrival_Time_PacketIn(15 DOWNTO 0)=VC(15 DOWNTO 0) and NextPacketArrival(15 DOWNTO 0)=VC(15 DOWNTO 0)) or (State=LVL_2 and empty='1' and Arrival_Time_PacketIn(15 DOWNTO 0)=Next_VC(15 DOWNTO 0))then
         WriteEn<= '1';
         ReadEn <= '0';
     else

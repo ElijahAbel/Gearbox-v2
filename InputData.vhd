@@ -38,7 +38,8 @@ entity InputData is
 		CLK			: in STD_LOGIC;
 		RST			: in STD_LOGIC;
 		index       : in integer;
-		NextPacketIn	: out STD_LOGIC_VECTOR(47 DOWNTO 0)
+		PacketIn	: out STD_LOGIC_VECTOR(47 DOWNTO 0);
+		NextPacketArrival : out STD_LOGIC_VECTOR(15 DOWNTO 0)
 		--Vld         : out std_logic
 	);
 end InputData;
@@ -49,8 +50,8 @@ signal Mem : internalMem;
 signal Output : STD_LOGIC_VECTOR(47 DOWNTO 0);
 --signal index : integer := 0;
 signal currentPacket : STD_LOGIC_VECTOR(47 DOWNTO 0);
-signal NextPacketArrival : STD_LOGIC_VECTOR(15 DOWNTO 0);
-signal NextPacketFinish : STD_LOGIC_VECTOR(15 DOWNTO 0);
+signal PacketArrival : STD_LOGIC_VECTOR(15 DOWNTO 0);
+signal PacketFinish : STD_LOGIC_VECTOR(15 DOWNTO 0);
 
 begin
 Mem <= ("0000000000000100" & "0000000000000000" & "0000000000000010",
@@ -208,7 +209,8 @@ Mem <= ("0000000000000100" & "0000000000000000" & "0000000000000010",
 "0000000000000001" & "0000000011111010" & "0000000111110101",
 "0000000000000000" & "0000000000000000" & "0000000000000000");
 
-NextPacketIn(47 DOWNTO 0) <= Mem(index)(47 DOWNTO 0); --Output of this module, PacketIn for Gearbox
+PacketIn(47 DOWNTO 0) <= Mem(index)(47 DOWNTO 0); --Output of this module, PacketIn for Gearbox
+NextPacketArrival(15 DOWNTO 0) <= Mem(index+1)(31 DOWNTO 16) when index<153;
 ---NextPacketArrival <= Mem(index)(31 DOWNTO 16);
 ---NextPacketFinish <= Mem(index)(15 DOWNTO 0);
 
