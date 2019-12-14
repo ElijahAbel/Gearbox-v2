@@ -117,6 +117,10 @@ signal Lvl2_DataOut0, Lvl2_DataOut1, Lvl2_DataOut2, Lvl2_DataOut3, Lvl2_DataOut4
 signal Lvl2_Empty0, Lvl2_Empty1, Lvl2_Empty2, Lvl2_Empty3, Lvl2_Empty4, Lvl2_Empty5, Lvl2_Empty6, Lvl2_Empty7, Lvl2_Empty8, Lvl2_Empty9 : STD_LOGIC;
 --signal Lvl2_Full0, Lvl2_Full1, Lvl2_Full2, Lvl2_Full3, Lvl2_Full4, Lvl2_Full5, Lvl2_Full6, Lvl2_Full7, Lvl2_Full8, Lvl2_Full9 : STD_LOGIC
 
+type flowLookup is array(0 to 63) of STD_LOGIC_VECTOR(1 DOWNTO 0);
+signal flowLevels : flowLookup := (others=>(others=>'0')); --initialize all to zero
+
+
 signal WriteEn, ReadEn : std_logic := '0';
 signal VC : STD_LOGIC_VECTOR(15 DOWNTO 0) := (others => '0');
 signal VCC_Round : STD_LOGIC_VECTOR(3 DOWNTO 0); --tells us which queue we should place a packet in
@@ -142,17 +146,20 @@ signal twenties_counter, two_hundreds_counter : integer := 1;
 signal every_twenty, every_two_hundred : integer := 0;
 signal state_sel_0_adj, state_sel_1_adj : integer;
 signal state_sel_lvl0, state_sel_lvl1 : std_logic := '0'; --if '0' then a, if '1' then b
-signal Finish_Time_PacketIn, Arrival_Time_PacketIn : std_logic_vector(15 downto 0);
-signal insertion_lvl : std_logic_vector(1 downto 0);
+signal Flow, Finish_Time_PacketIn, Arrival_Time_PacketIn : std_logic_vector(15 downto 0);
+signal exp_insertion_lvl, insertion_lvl : std_logic_vector(1 downto 0);
 signal index : integer := 0;
 signal PacketIn : STD_LOGIC_VECTOR(47 DOWNTO 0);
 signal Next_VC : STD_LOGIC_VECTOR(15 DOWNTO 0);
 signal NextPacketArrival : STD_LOGIC_VECTOR(15 DOWNTO 0);
+signal FlowInt  : integer := 0;
 --signal curr_queue_empty : std_logic;
 
 --signal CurrFIFOLvl0a_Empty : std_logic := '0'; 
 
 begin
+
+
 
 --Aggregate <= Tens + Hundreds + Thousands;
 VC_In_Adj <= Tens + Hundreds + Thousands; --adjustment value based on current VC
@@ -176,14 +183,18 @@ state_sel_lvl0 <= '0' when state_sel_0_adj < 9 or state_sel_0_adj=19 else '1'; -
 state_sel_lvl1 <= '0' when state_sel_1_adj < 100 else '1';
 
 --VC_Out(15 DOWNTO 0) <= VC(15 DOWNTO 0); --Outputs VC to top level
+Flow(15 DOWNTO 0) <= PacketIn(47 DOWNTO 32);
+FlowInt <= to_integer(unsigned(Flow));
 Finish_Time_PacketIn(15 DOWNTO 0) <= PacketIn(15 DOWNTO 0);
 Arrival_Time_PacketIn(15 DOWNTO 0) <= PacketIn(31 DOWNTO 16);
 
-insertion_lvl <= "00" when VC_In < 20 else
+insertion_lvl(1 DOWNTO 0) <= exp_insertion_lvl(1 DOWNTO 0) when unsigned(exp_insertion_lvl(1 DOWNTO 0)) >= unsigned(flowLevels(FlowInt)(1 DOWNTO 0)) else 
+                flowLevels(FlowInt)(1 DOWNTO 0);
+
+exp_insertion_lvl(1 DOWNTO 0) <= "00" when VC_In < 20 else
                  "01" when VC_In_Lvl1 < 200 else
                  "10" when VC_In_Lvl2 < 1000 else
                  "11";
-
 
 --Vld <= ReadEn and VldVector and (not Lvl0a_Empty0 or not Lvl0a_Empty1 or not Lvl0a_Empty2 or not Lvl0a_Empty3 or not Lvl0a_Empty4 or not Lvl0a_Empty5 or not Lvl0a_Empty6 or not Lvl0a_Empty7 or not Lvl0a_Empty8 or not Lvl0a_Empty9);
 --VldVector <= Is_Valid(s => Packet_Out_Temp(DATA_WIDTH - 1 Downto 0));
@@ -248,7 +259,16 @@ Lvl_2_QUEUE_7: FIFO PORT MAP(CLK => CLK, RST => RST, WriteEn => Lvl2_WriteEn7, P
 Lvl_2_QUEUE_8: FIFO PORT MAP(CLK => CLK, RST => RST, WriteEn => Lvl2_WriteEn8, PacketIn => PacketIn, ReadEn => Lvl2_ReadEn8, DataOut => Lvl2_DataOut8, Empty => Lvl2_Empty8);
 Lvl_2_QUEUE_9: FIFO PORT MAP(CLK => CLK, RST => RST, WriteEn => Lvl2_WriteEn9, PacketIn => PacketIn, ReadEn => Lvl2_ReadEn9, DataOut => Lvl2_DataOut9, Empty => Lvl2_Empty9);
 
-
+flowMapping : process(CLK,RST,WriteEn)
+begin
+if rising_edge(CLK) then
+    if(WriteEn='1') then
+        if(flowLevels(FlowInt)(1 DOWNTO 0) < insertion_lvl) then
+            flowLevels(FlowInt)(1 DOWNTO 0) <= insertion_lvl;
+        end if;
+    end if;
+end if;
+end process;
 
 --============Packet to be Output=============--
 PacketOut(47 downto 0) <= Lvl0a_DataOut0(47 DOWNTO 0) when State=LVL_0A and queue_sel_lvl0="0000" else
