@@ -20,9 +20,11 @@
 
 
 library IEEE;
+library std;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.numeric_std.ALL;
 use work.state_pkg.all;
+use std.textio.all;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -162,6 +164,12 @@ signal FlowInt  : integer := 0;
 signal size     : integer := 0;
 signal Lvl1_Dequeue_Amt, Lvl2_Dequeue_Amt : integer := 1;
 signal dequeue_counter : integer := 0;
+signal PacketOutTemp : STD_LOGIC_VECTOR(47 DOWNTO 0);
+signal PacketOutVld : std_logic;
+signal FlowOut, ArrTime, FinTime : STD_LOGIC_VECTOR(15 DOWNTO 0);
+
+
+
 --signal curr_queue_empty : std_logic;
 
 --signal CurrFIFOLvl0a_Empty : std_logic := '0'; 
@@ -312,7 +320,12 @@ Lvl2_Dequeue_Amt <=     size when queue_sel_lvl0="1001" else
                         1;
 
 --============Packet to be Output=============--
-PacketOut(47 downto 0) <= Lvl0a_DataOut0(47 DOWNTO 0) when State=LVL_0A and queue_sel_lvl0="0000" and ReadEn='1' else
+PacketOut(47 DOWNTO 0) <= PacketOutTemp(47 DOWNTO 0);
+PacketOutVld <= Is_Valid(s => PacketOutTemp(47 DOWNTO 0));
+FlowOut(15 DOWNTO 0) <= PacketOutTemp(47 DOWNTO 32);
+ArrTime(15 DOWNTO 0) <= PacketOutTemp(31 DOWNTO 16);
+FinTime(15 DOWNTO 0) <= PacketOutTemp(15 DOWNTO 0);
+PacketOutTemp(47 downto 0) <= Lvl0a_DataOut0(47 DOWNTO 0) when State=LVL_0A and queue_sel_lvl0="0000" and ReadEn='1' else
                           Lvl0a_DataOut1(47 DOWNTO 0) when State=LVL_0A and queue_sel_lvl0="0001" and ReadEn='1' else
                           Lvl0a_DataOut2(47 DOWNTO 0) when State=LVL_0A and queue_sel_lvl0="0010" and ReadEn='1' else
                           Lvl0a_DataOut3(47 DOWNTO 0) when State=LVL_0A and queue_sel_lvl0="0011" and ReadEn='1' else
@@ -781,7 +794,23 @@ if rising_edge(CLK) then
     end if;
 
 end if;
-end process;               
+end process;   
+
+ReportProc : process(CLK, ReadEn)
+file file_handler     : text open write_mode is "output2.txt";
+Variable row          : line;
+--Variable v_data_write : integer;
+begin
+if rising_edge(CLK) then
+    if(ReadEn<='1' and PacketOutVld='1') then
+        --report "DataOut: " & Integer'Image(to_integer(unsigned(FlowOut))) & " " & Integer'Image(to_integer(unsigned(ArrTime))) & " " & Integer'Image(to_integer(unsigned(FinTime)));
+        write(row, to_integer(unsigned(FlowOut)), right, 5);
+        write(row, to_integer(unsigned(ArrTime)), right, 5);
+        write(row, to_integer(unsigned(FinTime)), right, 5);
+        writeline(file_handler,row);
+    end if; 
+end if;
+end process;            
 
 state_machine : process(CLK,RST,State,empty,ReadEn) 
 begin
